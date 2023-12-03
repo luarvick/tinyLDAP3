@@ -340,6 +340,17 @@ class tinyLDAP3Client:
         """
 
         sat_value_schema = {
+            0: "SAM_DOMAIN_OBJECT",
+            268435456: "SAM_GROUP_OBJECT",
+            268435457: "SAM_NON_SECURITY_GROUP_OBJECT",
+            536870912: "SAM_ALIAS_OBJECT",
+            536870913: "SAM_NON_SECURITY_ALIAS_OBJECT",
+            805306368: "SAM_NORMAL_USER_ACCOUNT",
+            805306369: "SAM_MACHINE_ACCOUNT",
+            805306370: "SAM_TRUST_ACCOUNT",
+            1073741824: "SAM_APP_BASIC_GROUP",
+            1073741825: "SAM_APP_QUERY_GROUP",
+            2147483647: "SAM_ACCOUNT_TYPE_MAX",
         }
         return sat_value_schema[sat_value] if sat_value in sat_value_schema.keys() else "sAMAccountType Unknown"
 
@@ -353,8 +364,8 @@ class tinyLDAP3Client:
         """
 
         uac_value_schema = {
-            512: "Enabled",
-            514: "Disabled",
+            512: "Normal Account",
+            514: "Disabled Account",
             544: "Enabled, Password Not Required",
             546: "Disabled, Password Not Required",
             66048: "Enabled, Password Doesn't Expire",
