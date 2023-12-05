@@ -21,19 +21,11 @@ class LdapBaseError(Exception):
         return self.message
 
 
-class LdapAttrFormatError(LdapBaseError):
-    pass
-
-
 class LdapBoundError(LdapBaseError):
     pass
 
 
 class LdapConnectionError(LdapBaseError):
-    pass
-
-
-class LdapObjTypeError(LdapBaseError):
     pass
 
 

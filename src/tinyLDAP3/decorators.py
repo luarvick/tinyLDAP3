@@ -1,6 +1,8 @@
 import logging
 from ldap3.core.exceptions import (
+    LDAPAttributeError,
     LDAPInvalidCredentialsResult,
+    LDAPObjectClassError,
     LDAPPasswordIsMandatoryError,
     LDAPSocketOpenError,
     LDAPSocketReceiveError,
@@ -14,10 +16,10 @@ from .exceptions import LdapConnectionError, LdapUnexpectedError
 """ ######################################################### """
 
 
-def conn_logging(conn_method):
+def ldap_logging(conn_method):
 
     """
-    LDAP. Connection Logging Decorator
+    LDAP. Connection & Methods Logging Decorator
     :param conn_method: LDAP Connection
     :return:
     """
@@ -25,7 +27,7 @@ def conn_logging(conn_method):
     def wrapped(*args, **kwargs):
 
         """
-        LDAP. Connection Log Wrapper
+        LDAP. Connection & Methods Log Wrapper
         :return:
         """
 
@@ -35,17 +37,19 @@ def conn_logging(conn_method):
         try:
             # Return Union[tuple, dict, None]
             return conn_method(*args, **kwargs)
+        except (LDAPAttributeError, LDAPObjectClassError) as err:
+            logging.error(log_message.format(message=f"Error Detail: {repr(err)}."))
+            raise err
         except (
                 LDAPInvalidCredentialsResult,
-                LDAPPasswordIsMandatoryError,
+                LDAPPasswordIsMandatoryError,   # No User Password Error (None or "")
                 LDAPSocketOpenError,
                 LDAPSocketReceiveError,
                 LDAPSocketSendError
         ) as err:
-            logging.error(log_message.format(message=f"Error Detail:\n{err}."))
-            raise LdapConnectionError(log_message.format(message="Connection Has Been Failed."))
-
+            logging.error(log_message.format(message=f"Error Detail: {repr(err)}."))
+            raise LdapConnectionError("Connection has been failed.")
         except Exception as err:
-            logging.error(log_message.format(message=f"Error Detail:\n{err}."))
-            raise LdapUnexpectedError(log_message.format(message="Unexpected Error Occurred."))
+            logging.error(log_message.format(message=f"Error Detail: {repr(err)}."))
+            raise LdapUnexpectedError("Unexpected error occurred.")
     return wrapped

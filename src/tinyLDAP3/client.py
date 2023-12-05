@@ -1,8 +1,9 @@
 import logging, re
 from ldap3 import ALL, AUTO_BIND_DEFAULT, ROUND_ROBIN, SUBTREE, Connection, Server, ServerPool
+from ldap3.core.exceptions import LDAPAttributeError, LDAPObjectClassError
 from typing import Any, Union, Iterable
-from .decorators import conn_logging
-from .exceptions import LdapAttrFormatError, LdapBoundError, LdapObjTypeError
+from .decorators import ldap_logging
+from .exceptions import LdapBoundError
 
 
 """ ######################################################### """
@@ -169,7 +170,6 @@ class tinyLDAP3Client:
             exhaust=False
         )
 
-    @conn_logging
     def __ldap_entries(self, search_query: str, returned_attrs_collection: Iterable[str]) -> list:
 
         """
@@ -195,8 +195,6 @@ class tinyLDAP3Client:
         ) as conn:
             # 'conn.bound' - The status of the LDAP session (True / False)
             if conn.bound:
-                logging.debug(log_message.format(message="Connection Has Been Successfully Bound."))
-
                 conn.search(
                     search_base=self.__search_base,
                     search_filter=search_query,
@@ -205,7 +203,7 @@ class tinyLDAP3Client:
                 )
                 return conn.entries
             logging.error(log_message.format(message=f"Error Detail:\n{conn}."))
-            raise LdapBoundError(log_message.format(message="Bound Error Occurred."))
+            raise LdapBoundError("Bound error occurred.")
 
     @staticmethod
     def __ldap_computer_get_detail_query(attr_name: str, attr_value: str) -> str:
@@ -379,6 +377,7 @@ class tinyLDAP3Client:
         }
         return uac_value_schema[uac_value] if uac_value in uac_value_schema.keys() else "userAccountControl Unknown"
 
+    @ldap_logging
     def computer_get(
             self,
             attr_name: str,
@@ -402,8 +401,9 @@ class tinyLDAP3Client:
         )
         if resp_raw:
             return {attr.key: attr.value for attr in resp_raw[0]}
-        self.__ldap_obj_not_found(log_message.format(message="LDAP Object Not Found."))
+        self.__ldap_obj_not_found(log_message.format(message="LDAP Object not found."))
 
+    @ldap_logging
     def group_get(
             self,
             attr_name: str,
@@ -434,22 +434,29 @@ class tinyLDAP3Client:
                     else:
                         resp_result[attr_key] = ((resp_result[attr_key], resp_result[attr_key]),)
             return resp_result
-        self.__ldap_obj_not_found(log_message.format(message="LDAP Object Not Found."))
+        self.__ldap_obj_not_found(log_message.format(message="LDAP Object not found."))
 
-    @conn_logging
-    def person_auth(self, login: str, password: str) -> tuple[bool, dict[str, Any]]:
+    @ldap_logging
+    def person_auth(
+            self,
+            login: str,
+            password: str,
+            returned_attrs_collection: Iterable[str] = None
+    ) -> tuple[bool, dict[str, Any]]:
 
         """
-        Person Auth Will Return Dictionary of Person Attributes Values.
-        :param login:       User Login as UPN (sAMAccountName@example.com)
-        :param password:    User Password
+        Person Auth Will Return Tuple of Connection Bound Value and Dictionary of Person Attributes Values or
+        Connection Result Dictionary (Auth Error).
+        :param login:                       User Login as UPN (sAMAccountName@example.com)
+        :param password:                    User Password
+        :param returned_attrs_collection:   Returned Attributes Collection or "*" or None
         :return:
         """
 
         log_message = f"@ LDAP Person Auth @ - 'Login: {login}' - {{message}}"
 
         if not re.fullmatch(mail_regex_rfc822fw_2, login):
-            raise LdapAttrFormatError(log_message.format(message="LDAP Person Invalid Login Format."))
+            raise LDAPAttributeError("Doesn't match the format of the 'userPrincipalName' attribute.")
         conn = Connection(
             self.__server_pool,
             raise_exceptions=False,
@@ -463,15 +470,16 @@ class tinyLDAP3Client:
                 search_base=self.__search_base,
                 search_filter=self.__ldap_person_get_active_query(attr_name="userPrincipalName", attr_value=login),
                 search_scope=SUBTREE,
-                attributes=self.__LDAP_PERSON_AUTH_RETURNED_ATTRS_TUPLE
+                attributes=returned_attrs_collection or self.__LDAP_PERSON_AUTH_RETURNED_ATTRS_TUPLE
             )
             resp_result = {attr.key: attr.value for attr in conn.entries[0]}
             conn.unbind()
             return True, resp_result
         # conn.bound = False, conn.result["result"] = 49
-        logging.warning(log_message.format(message="LDAP Person Invalid Credentials."))
+        logging.warning(log_message.format(message="LDAP Person invalid credentials."))
         return False, conn.result
 
+    @ldap_logging
     def person_get(
             self,
             attr_name: str,
@@ -501,8 +509,9 @@ class tinyLDAP3Client:
         )
         if resp_raw:
             return {attr.key: attr.value for attr in resp_raw[0]}
-        self.__ldap_obj_not_found(log_message.format(message="LDAP Object Not Found."))
+        self.__ldap_obj_not_found(log_message.format(message="LDAP Object not found."))
 
+    @ldap_logging
     def objects_search(
             self,
             objects_type: str,
@@ -512,7 +521,8 @@ class tinyLDAP3Client:
     ) -> tuple:
 
         """
-        Objects (`Person`, `Group` or `Computer`) Search Will Return Collection of Dictionary of Objects Attributes Values.
+        Objects (`Person`, `Group` or `Computer`) Search Will Return Collection of Dictionary of
+        Objects Attributes Values.
         :param objects_type:                Objects Types: `Person`, `Group` or `Computer`
         :param search_value:                Objects Search Attributes Value
         :param search_by_attrs_collection:  Objects Search via Attributes Collection or None
@@ -539,7 +549,7 @@ class tinyLDAP3Client:
                 common_returned_attrs_collection = self.__LDAP_COMPUTER_COMMON_RETURNED_ATTRS_TUPLE
                 order_by = self._computer_order_by
             case _:
-                raise LdapObjTypeError(log_message.format(message="LDAP Objects Type Error."))
+                raise LDAPObjectClassError(f"Method doesn't support class {repr(objects_type)}.")
 
         if returned_attrs_collection and order_by not in returned_attrs_collection:
             returned_attrs_collection = list(returned_attrs_collection)
@@ -550,7 +560,7 @@ class tinyLDAP3Client:
             returned_attrs_collection=returned_attrs_collection or common_returned_attrs_collection
         )
         if not resp_raw:
-            logging.warning(log_message.format(message="LDAP Object(s) Not Found."))
+            self.__ldap_obj_not_found(log_message.format(message="LDAP Object(s) not found."))
 
         # Return Empty Tuple if not 'resp_raw'
         return tuple(
