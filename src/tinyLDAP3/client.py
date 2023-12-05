@@ -1,19 +1,23 @@
-import logging
-from ldap3 import ALL, ROUND_ROBIN, SUBTREE, Connection, Server, ServerPool
-from ldap3.core.exceptions import (
-    LDAPInvalidCredentialsResult,
-    LDAPPasswordIsMandatoryError,
-    LDAPSocketOpenError,
-    LDAPSocketReceiveError,
-    LDAPSocketSendError,
-)
-from typing import Union, Iterable
-from .exceptions import LdapBoundError, LdapConnectionError, LdapObjTypeError, LdapUnexpectedError
+import logging, re
+from ldap3 import ALL, AUTO_BIND_DEFAULT, ROUND_ROBIN, SUBTREE, Connection, Server, ServerPool
+from typing import Any, Union, Iterable
+from .decorators import conn_logging
+from .exceptions import LdapAttrFormatError, LdapBoundError, LdapObjTypeError
 
 
 """ ######################################################### """
 """ ******************* TINY LDAP3 CLIENT ******************* """
 """ ######################################################### """
+
+
+# Fullmatch, no symbols !#$%&'*+/=?^_`{|}~- and no first '\"' after '^(?:[a-z0-9]+(?:\.[a-z0-9]+)*|'
+mail_regex_rfc822fw_2 = re.compile(
+    r"""^(?:[a-z0-9]+(?:\.[a-z0-9]+)*|(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*\")
+    @(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|
+    \[(?:(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9]))\.){3}
+    (?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9])|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|
+    \\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])$""", re.X
+)
 
 
 class tinyLDAP3Client:
@@ -65,6 +69,15 @@ class tinyLDAP3Client:
         "sAMAccountType",
         "whenChanged",
         "whenCreated",
+    )
+    __LDAP_PERSON_AUTH_RETURNED_ATTRS_TUPLE = (
+        "cn",
+        "employeeNumber",
+        "ipPhone",
+        "mail",
+        "mobile",
+        "userPrincipalName",
+        "sAMAccountName",
     )
     __LDAP_PERSON_COMMON_SEARCH_BY_ATTRS_TUPLE = (
         "cn",
@@ -156,6 +169,7 @@ class tinyLDAP3Client:
             exhaust=False
         )
 
+    @conn_logging
     def __ldap_entries(self, search_query: str, returned_attrs_collection: Iterable[str]) -> list:
 
         """
@@ -167,46 +181,31 @@ class tinyLDAP3Client:
 
         log_message = "@ LDAP Entries @ - {message}"
 
-        try:
-            # 'conn' example: "{ldap_uri} - ssl - user: {ldap_user} - not lazy - \
-            # bound - open - <local: {local_ip}:{local_port} - remote: {ldap_ip}:{ldap_port}> - \
-            # tls not started - listening - SyncStrategy - internal decoder"
-            with Connection(
-                self.__server_pool,
-                raise_exceptions=True,
-                auto_bind="DEFAULT",
-                user=self.__user_dn,
-                password=self.__user_pass,
-                return_empty_attributes=True,
-                receive_timeout=self._receive_timeout
-            ) as conn:
-                # 'conn.bound' - The status of the LDAP session (True / False)
-                if conn.bound:
-                    logging.debug(log_message.format(message="Connection Has Been Successfully Bound."))
+        # 'conn' example: "{ldap_uri} - ssl - user: {ldap_user} - not lazy - \
+        # bound - open - <local: {local_ip}:{local_port} - remote: {ldap_ip}:{ldap_port}> - \
+        # tls not started - listening - SyncStrategy - internal decoder"
+        with Connection(
+            self.__server_pool,
+            raise_exceptions=True,
+            auto_bind=AUTO_BIND_DEFAULT,
+            user=self.__user_dn,
+            password=self.__user_pass,
+            return_empty_attributes=True,
+            receive_timeout=self._receive_timeout
+        ) as conn:
+            # 'conn.bound' - The status of the LDAP session (True / False)
+            if conn.bound:
+                logging.debug(log_message.format(message="Connection Has Been Successfully Bound."))
 
-                    conn.search(
-                        search_base=self.__search_base,
-                        search_filter=search_query,
-                        search_scope=SUBTREE,
-                        attributes=returned_attrs_collection
-                    )
-                    return conn.entries
-                logging.error(log_message.format(message=f"Error Detail:\n{conn}."))
-                raise LdapBoundError(log_message.format(message="Bound Error Occurred."))
-
-        except (
-                LDAPInvalidCredentialsResult,
-                LDAPPasswordIsMandatoryError,
-                LDAPSocketOpenError,
-                LDAPSocketReceiveError,
-                LDAPSocketSendError
-        ) as err:
-            logging.error(log_message.format(message=f"Error Detail:\n{err}."))
-            raise LdapConnectionError(log_message.format(message="Connection Has Been Failed."))
-
-        except Exception as err:
-            logging.error(log_message.format(message=f"Error Detail:\n{err}."))
-            raise LdapUnexpectedError(log_message.format(message="Unexpected Error Occurred."))
+                conn.search(
+                    search_base=self.__search_base,
+                    search_filter=search_query,
+                    search_scope=SUBTREE,
+                    attributes=returned_attrs_collection
+                )
+                return conn.entries
+            logging.error(log_message.format(message=f"Error Detail:\n{conn}."))
+            raise LdapBoundError(log_message.format(message="Bound Error Occurred."))
 
     @staticmethod
     def __ldap_computer_get_detail_query(attr_name: str, attr_value: str) -> str:
@@ -385,7 +384,7 @@ class tinyLDAP3Client:
             attr_name: str,
             attr_value: str,
             returned_attrs_collection: Iterable[str] = None
-    ) -> Union[dict, None]:
+    ) -> Union[dict[str, Any], None]:
 
         """
         Computer Get Will Return Dictionary of Computer Attributes Values.
@@ -410,7 +409,7 @@ class tinyLDAP3Client:
             attr_name: str,
             attr_value: str,
             returned_attrs_collection: Iterable[str] = None
-    ) -> Union[dict, None]:
+    ) -> Union[dict[str, Any], None]:
 
         """
         Group Get Will Return Dictionary of Group Attributes Values.
@@ -437,13 +436,49 @@ class tinyLDAP3Client:
             return resp_result
         self.__ldap_obj_not_found(log_message.format(message="LDAP Object Not Found."))
 
+    @conn_logging
+    def person_auth(self, login: str, password: str) -> tuple[bool, dict[str, Any]]:
+
+        """
+        Person Auth Will Return Dictionary of Person Attributes Values.
+        :param login:       User Login as UPN (sAMAccountName@example.com)
+        :param password:    User Password
+        :return:
+        """
+
+        log_message = f"@ LDAP Person Auth @ - 'Login: {login}' - {{message}}"
+
+        if not re.fullmatch(mail_regex_rfc822fw_2, login):
+            raise LdapAttrFormatError(log_message.format(message="LDAP Person Invalid Login Format."))
+        conn = Connection(
+            self.__server_pool,
+            raise_exceptions=False,
+            user=login,
+            password=password,
+            receive_timeout=self._receive_timeout
+        )
+        conn.bind()
+        if conn.result["result"] == 0:
+            conn.search(
+                search_base=self.__search_base,
+                search_filter=self.__ldap_person_get_active_query(attr_name="userPrincipalName", attr_value=login),
+                search_scope=SUBTREE,
+                attributes=self.__LDAP_PERSON_AUTH_RETURNED_ATTRS_TUPLE
+            )
+            resp_result = {attr.key: attr.value for attr in conn.entries[0]}
+            conn.unbind()
+            return True, resp_result
+        # conn.bound = False, conn.result["result"] = 49
+        logging.warning(log_message.format(message="LDAP Person Invalid Credentials."))
+        return False, conn.result
+
     def person_get(
             self,
             attr_name: str,
             attr_value: str,
             is_active: bool = False,
             returned_attrs_collection: Iterable[str] = None
-    ) -> Union[dict, None]:
+    ) -> Union[dict[str, Any], None]:
 
         """
         Person Get Will Return Dictionary of Person Attributes Values.
