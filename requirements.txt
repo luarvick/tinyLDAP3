@@ -1,2 +1,6 @@
+annotated-types==0.6.0
 ldap3==2.9.1
 pyasn1==0.5.1
+pydantic==2.5.2
+pydantic_core==2.14.5
+typing_extensions==4.8.0

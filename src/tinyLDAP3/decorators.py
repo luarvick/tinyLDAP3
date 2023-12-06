@@ -8,6 +8,7 @@ from ldap3.core.exceptions import (
     LDAPSocketReceiveError,
     LDAPSocketSendError,
 )
+from pydantic import ValidationError
 from .exceptions import LdapConnectionError, LdapUnexpectedError
 
 
@@ -37,7 +38,7 @@ def ldap_logging(conn_method):
         try:
             # Return Union[tuple, dict, None]
             return conn_method(*args, **kwargs)
-        except (LDAPAttributeError, LDAPObjectClassError) as err:
+        except (LDAPAttributeError, LDAPObjectClassError, ValidationError) as err:
             logging.error(log_message.format(message=f"Error Detail: {repr(err)}."))
             raise err
         except (

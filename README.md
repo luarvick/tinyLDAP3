@@ -19,11 +19,9 @@
             <a href="#usage">Usage</a>
             <ul>
                 <li><a href="#instance-create">Instance Create</a></li>
-                <li><a href="#computer-get-detail">Computer Get Detail</a></li>
-                <li><a href="#group-get-detail">Group Get Detail</a></li>
-                <li><a href="#person-auth">Person Auth</a></li>
-                <li><a href="#person-get-detail">Person Get Detail</a></li>
+                <li><a href="#object-detail">Object Detail</a></li>
                 <li><a href="#objects-search">Objects Search</a></li>
+                <li><a href="#person-auth">Person Auth</a></li>
             </ul>
         </li>
         <li><a href="#customization">Customization</a></li>
@@ -92,67 +90,296 @@ if __name__ == "__main__":
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
-#### Computer Get Detail
+#### Object Detail
 
-Predefined list of returned attributes:
-* `"cn"`,
-* `"description"`,
-* `"distinguishedName"`,
-* `"lastLogon"`,
-* `"logonCount"`,
-* `"name"`,
-* `"objectGUID"`,
-* `"operatingSystem"`,
-* `"operatingSystemVersion"`,
-* `"sAMAccountName"`,
-* `"sAMAccountType"`,
-* `"servicePrincipalName"`,
-* `"whenChanged"`,
-* `"whenCreated"`,
+`object_category` - Three categories are expected: `Computer`, `Group` or `Person`.
 
-Optional method arguments:</br>
-`returned_attrs_collection: Iterable[str] = None` - Override the predefined list of returned attributes
+<details>
+    <summary>Predefined list of returned attributes</summary>
+    <ul>
+        <li>
+            <p>Category: Computer</p>
+            <details>
+                <ul>
+                    <li><p>cn</p></li>
+                    <li><p>description</p></li>
+                    <li><p>distinguishedName</p></li>
+                    <li><p>lastLogon</p></li>
+                    <li><p>logonCount</p></li>
+                    <li><p>name</p></li>
+                    <li><p>objectGUID</p></li>
+                    <li><p>operatingSystem</p></li>
+                    <li><p>operatingSystemVersion</p></li>
+                    <li><p>sAMAccountName</p></li>
+                    <li><p>sAMAccountType</p></li>
+                    <li><p>servicePrincipalName</p></li>
+                    <li><p>whenChanged</p></li>
+                    <li><p>whenCreated</p></li>
+                </ul>
+            </details>
+        </li>
+        <li>
+            <p>Category: Group</p>
+            <details>
+                <ul>
+                    <li><p>cn</p></li>
+                    <li><p>description</p></li>
+                    <li><p>distinguishedName</p></li>
+                    <li><p>mail</p></li>
+                    <li><p>member</p></li>
+                    <li><p>memberOf</p></li>
+                    <li><p>name</p></li>
+                    <li><p>objectGUID</p></li>
+                    <li><p>sAMAccountName</p></li>
+                    <li><p>sAMAccountType</p></li>
+                    <li><p>whenChanged</p></li>
+                    <li><p>whenCreated</p></li>
+                </ul>
+            </details>
+        </li>
+        <li>
+            <p>Category: Person</p>
+            <details>
+                <ul>
+                    <li><p>accountExpires</p></li>
+                    <li><p>badPasswordTime</p></li>
+                    <li><p>badPwdCount</p></li>
+                    <li><p>cn</p></li>
+                    <li><p>company</p></li>
+                    <li><p>department</p></li>
+                    <li><p>displayName</p></li>
+                    <li><p>employeeID</p></li>
+                    <li><p>employeeNumber</p></li>
+                    <li><p>extensionAttribute12</p></li>
+                    <li><p>extensionAttribute5</p></li>
+                    <li><p>extensionAttribute6</p></li>
+                    <li><p>extensionAttribute9</p></li>
+                    <li><p>ipPhone</p></li>
+                    <li><p>l</p></li>
+                    <li><p>lastLogoff</p></li>
+                    <li><p>lastLogon</p></li>
+                    <li><p>lockoutTime</p></li>
+                    <li><p>logonCount</p></li>
+                    <li><p>mail</p></li>
+                    <li><p>manager</p></li>
+                    <li><p>memberOf</p></li>
+                    <li><p>mobile</p></li>
+                    <li><p>msDS-UserPasswordExpiryTimeComputed</p></li>
+                    <li><p>msExchExtensionAttribute22</p></li>
+                    <li><p>msExchExtensionAttribute23</p></li>
+                    <li><p>msExchExtensionCustomAttribute1</p></li>
+                    <li><p>msExchExtensionCustomAttribute2</p></li>
+                    <li><p>objectGUID</p></li>
+                    <li><p>pwdLastSet</p></li>
+                    <li><p>sAMAccountName</p></li>
+                    <li><p>sAMAccountType</p></li>
+                    <li><p>servicePrincipalName</p></li>
+                    <li><p>streetAddress</p></li>
+                    <li><p>telephoneNumber</p></li>
+                    <li><p>thumbnailPhoto</p></li>
+                    <li><p>title</p></li>
+                    <li><p>userAccountControl</p></li>
+                    <li><p>userPrincipalName</p></li>
+                    <li><p>whenChanged</p></li>
+                    <li><p>whenCreated</p></li>
+                </ul>
+            </details>
+        </li>
+    </ul>
+</details>
+
+Optional arguments:
+* `is_active: bool = False` - Define the search scope: Active or All Users<
+* `returned_attrs_collection: Iterable[str] = None` - Override the collection of predefined returned attributes. 
+
+##### Computer
 
 ```python
 ldap = ...
-print(ldap.computer_get(
-    attr_name="cn", 
+print("Result:", ldap.object_detail(
+    object_category="computer",
+    attr_name="sAMAccountName", 
     attr_value="value",
-    returned_attrs_collection=["cn", "description", "distinguishedName"]
+    returned_attrs_collection=["description", "sAMAccountName", "mail", "distinguishedName"]
 ))
-# Result: {'description': None, 'distinguishedName': '...', 'cn': 'value'}
+# Result: {
+#     'operatingSystem': None, 
+#     'sAMAccountName': 'value', 
+#     'whenCreated': datetime.datetime(...), 
+#     'lastLogon': None, 
+#     'cn': '...'
+# }
+```
+
+##### Group
+
+```python
+ldap = ...
+print("Result:", ldap.object_detail(
+    object_category="group",
+    attr_name="sAMAccountName", 
+    attr_value="value",
+    returned_attrs_collection=["description", "sAMAccountName", "mail", "distinguishedName"]
+))
+# Result: {'mail': None, 'sAMAccountName': 'value', 'description': '...', 'distinguishedName': '...', 'cn': '...'}
+```
+
+##### Person
+
+```python
+ldap = ...
+# Unique value
+print("Result:", ldap.object_detail(
+    object_category="person",
+    attr_name="sAMAccountName", 
+    attr_value="unique_value",
+    returned_attrs_collection=["sAMAccountName", "mail", "employeeNumber"]
+))
+# Result: {'mail': '...', 'sAMAccountName': 'unique_value', 'employeeNumber': '...'}
+
+print("Result", ldap.object_detail(
+    object_category="person",
+    attr_name="sn",
+    attr_value="value",
+    returned_attrs_collection=["sAMAccountName", "mail", "employeeNumber"]
+))
+# WARNING:root:@ LDAP Object Detail @ - 'ObjectCategory: `person`, AttrName: `sn`, Value: `value`' \
+# - More than one LDAP Object were found. Use attributes with unique values.
+# Result: (
+#     {'mail': '...', 'employeeNumber': '...', 'sAMAccountName': '...', 'sn': 'value'}, 
+#     {'mail': '...', 'employeeNumber': '...', 'sAMAccountName': '...', 'sn': 'value'}
+# )
 ```
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
-#### Group Get Detail
+#### Objects Search
 
-Predefined list of returned attributes:
-* `"cn"`,
-* `"description"`,
-* `"distinguishedName"`,
-* `"mail"`,
-* `"member"`,
-* `"memberOf"`,
-* `"name"`,
-* `"objectGUID"`,
-* `"sAMAccountName"`,
-* `"sAMAccountType"`,
-* `"whenChanged"`,
-* `"whenCreated"`,
+`object_category` - Three categories are expected: `Computer`, `Group` or `Person`.
 
-Optional method arguments:</br>
-`returned_attrs_collection: Iterable[str] = None` - Override the predefined list of returned attributes 
+<details>
+    <summary>Predefined list of attributes for Person (User) search</summary>
+    <ul>
+        <li>
+            <p>Category: Person</p>
+            <details>
+                <ul>
+                    <li><p>cn</p></li>
+                    <li><p>employeeNumber</p></li>
+                    <li><p>ipPhone</p></li>
+                    <li><p>mail</p></li>
+                    <li><p>mobile</p></li>
+                    <li><p>sAMAccountName</p></li>
+                </ul>
+            </details>
+        </li>
+    </ul>
+</details>
+
+<details>
+    <summary>Predefined list of returned attributes</summary>
+    <ul>
+        <li>
+            <p>Category: Computer</p>
+            <details>
+                <ul>
+                    <li><p>cn</p></li>
+                    <li><p>operatingSystem</p></li>
+                    <li><p>operatingSystemVersion</p></li>
+                    <li><p>whenChanged</p></li>
+                    <li><p>whenCreated</p></li>
+                </ul>
+            </details>
+        </li>
+        <li>
+            <p>Category: Group</p>
+            <details>
+                <ul>
+                    <li><p>distinguishedName</p></li>
+                    <li><p>mail</p></li>
+                    <li><p>sAMAccountName</p></li>
+                    <li><p>whenChanged</p></li>
+                    <li><p>whenCreated</p></li>   
+                </ul>
+            </details>
+        </li>
+        <li>
+            <p>Category: Person</p>
+            <details>
+                <ul>
+                    <li><p>department</p></li>
+                    <li><p>displayName</p></li>
+                    <li><p>employeeNumber</p></li>
+                    <li><p>ipPhone</p></li>
+                    <li><p>mail</p></li>
+                    <li><p>mobile</p></li>
+                    <li><p>sAMAccountName</p></li>
+                    <li><p>title</p></li>
+                    <li><p>userAccountControl</p></li>
+                    <li><p>whenChanged</p></li>
+                    <li><p>whenCreated</p></li>
+                </ul>
+            </details>
+        </li>
+    </ul>
+</details>
+
+Category searching:
+* `Computer` - wildcard: `*value*`
+* `Group` - wildcard: `*value*`
+* `Person` - wildcard: `value*`
+
+
+Optional method arguments:
+* `order_by: str = "sAMAccountName"` -  Sorting by a specific attribute. Default value `sAMAccountname`. 
+The attribute will be added automatically if it's missing from the collection of returned attributes
+* `search_by_attrs_collection: Iterable[str] = None` - Override the predefined list for Person (User) search
+* `returned_attrs_collection: Iterable[str] = None` - Override the predefined list of returned attributes
+
+##### Computer
 
 ```python
 ldap = ...
-print(ldap.group_get(
-    attr_name="sAMAccountName", 
+print("Result:", ldap.objects_search(
+    object_category="computer",
     attr_value="value",
-    returned_attrs_collection=["description", "sAMAccountName", "mail", "distinguishedName"]
+    returned_attrs_collection=["cn", "lastLogon", "operatingSystem"]
 ))
-# Result: {'mail': None, 'sAMAccountName': 'value', 'distinguishedName': '...', 'description': '...'}
+# Result: (
+#     {'sAMAccountName': '...', 'cn': 'value', 'lastLogon': datetime.datetime(...), 'operatingSystem': '...'},
+#     ...,
+#     {'sAMAccountName': '...', 'cn': 'value', 'lastLogon': None, 'operatingSystem': '...'}, 
+# )
+```
+
+##### Group
+
+```python
+ldap = ...
+print("Result:", ldap.objects_search(
+    object_category="group",
+    attr_value="value",
+    returned_attrs_collection=["sAMAccountName", "distinguishedName"]
+))
+# Result: (
+#     {'distinguishedName': 'CN=...', 'sAMAccountName': 'value'}, 
+#     ...,
+#     {'distinguishedName': 'CN=...', 'sAMAccountName': 'value'},
+# )
+```
+
+##### Person
+
+```python
+ldap = ...
+print("Result", ldap.objects_search(
+    object_category="person",
+    attr_value="value",
+    order_by="displayName",
+    returned_attrs_collection=["mail"]
+))
+# Result: ({'mail': None, 'displayName': '...'}, ..., {'mail': '...', 'displayName': '...'}
 ```
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
@@ -160,7 +387,7 @@ print(ldap.group_get(
 
 #### Person Auth
 
-`login` - Expected value of the `userPrincipalName` Attribute 
+`login` - Expected value of the `userPrincipalName` attribute 
 
 Predefined list of returned attributes:
 * `"cn"`,
@@ -175,6 +402,7 @@ Optional method arguments:</br>
 `returned_attrs_collection: Iterable[str] = None` - Override the predefined list of returned attributes 
 
 ```python
+ldap = ...
 print(ldap.person_auth(
     login="login@example.com", 
     password="***",
@@ -207,101 +435,6 @@ print(ldap.person_auth(
 # )
 ```
 
-#### Person Get Detail
-
-Predefined list of returned attributes:
-* `"accountExpires"`,
-* `"badPasswordTime"`,
-* `"badPwdCount"`,
-* `"cn"`,
-* `"company"`,
-* `"department"`,
-* `"displayName"`,
-* `"employeeID"`,
-* `"employeeNumber"`,
-* `"extensionAttribute12"`,
-* `"extensionAttribute5"`,
-* `"extensionAttribute6"`,
-* `"extensionAttribute9"`,
-* `"ipPhone"`,
-* `"l"`,
-* `"lastLogoff"`,
-* `"lastLogon"`,
-* `"lockoutTime"`,
-* `"logonCount"`,
-* `"mail"`,
-* `"manager"`,
-* `"memberOf"`,
-* `"mobile"`,
-* `"msDS-UserPasswordExpiryTimeComputed"`,
-* `"msExchExtensionAttribute22"`,
-* `"msExchExtensionAttribute23"`,
-* `"msExchExtensionCustomAttribute1"`,
-* `"msExchExtensionCustomAttribute2"`,
-* `"objectGUID"`,
-* `"pwdLastSet"`,
-* `"sAMAccountName"`,
-* `"sAMAccountType"`,
-* `"servicePrincipalName"`,
-* `"streetAddress"`,
-* `"telephoneNumber"`,
-* `"thumbnailPhoto"`,
-* `"title"`,
-* `"userAccountControl"`,
-* `"userPrincipalName"`,
-* `"whenChanged"`,
-* `"whenCreated"`,
-
-Optional method arguments:</br>
-`is_active: bool = False` - Define the search scope: Active or All Persons (Users)</br>
-`returned_attrs_collection: Iterable[str] = None` - Override the predefined list of returned attributes 
-
-```python
-ldap = ...
-print(ldap.person_get(
-    attr_name="sAMAccountName", 
-    attr_value="value",
-    returned_attrs_collection=["displayName", "sAMAccountName", "employeeNumber"]
-))
-# Result: {'displayName': '...', 'employeeNumber': '...', 'sAMAccountName': 'value'}
-```
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-#### Objects Search
-
-`object_type` - Three types of values are expected: `Person`, `Group` or `Computer`.</br>
-`Person` - Search wildcard: `value*`</br>
-`Group` - Search wildcard: `*value*`</br>
-`Computer` - Search wildcard: `*value*`
-
-Optional method arguments:</br>
-`search_by_attrs_collection: Iterable[str] = None` - Override the predefined list of search attributes for Person (User)</br>
-`returned_attrs_collection: Iterable[str] = None` - Override the predefined list of returned attributes 
-
-```python
-ldap = ...
-print(ldap.objects_search(objects_type="Person", search_value="value"))
-# Result:
-# (
-#     {
-#         'displayName': '...', 
-#         'mobile': '...', 
-#         'ipPhone': '...', 
-#         'sAMAccountName': 'value*', 
-#         'mail': '...', 
-#         'employeeNumber': '...', 
-#         'userAccountControl': '...', 
-#         'department': '...', 
-#         'title': '...'
-#     },
-#     {
-#         ...
-#     },
-# )
-```
-
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
@@ -309,7 +442,7 @@ print(ldap.objects_search(objects_type="Person", search_value="value"))
 <!-- CUSTOMIZATION -->
 ## Customization
 
-Overriding `order_by` instance attributes:
+Overriding `_search_limit` instance attributes:
 
 ```python
 from tinyLDAP3 import tinyLDAP3Client
@@ -318,9 +451,7 @@ class tinyLDAP3Custom(tinyLDAP3Client):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        self._person_order_by = "New Attr Name"
-        self._group_order_by = "New Attr Name"
-        self._computer_order_by = "New Attr Name"
+        self._search_limit = 1000
 ```
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
