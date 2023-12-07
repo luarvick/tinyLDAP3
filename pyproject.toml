@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tinyLDAP3"
+version = "0.2.4"
+authors = [
+  { name="Luarvick", email="lu.luarvick@gmail.com" },
+]
+description = "Tiny wrapper for Python ldap3 Package."
+readme = "README.md"
+dependencies = [
+    "ldap3==2.9.1",
+    "pydantic==2.4.2"
+]
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/luarvick/tinyLDAP3"
+Issues = "https://github.com/luarvick/tinyLDAP3/issues"

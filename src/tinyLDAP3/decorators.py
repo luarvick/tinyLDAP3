@@ -2,6 +2,7 @@ import logging
 from ldap3.core.exceptions import (
     LDAPAttributeError,
     LDAPInvalidCredentialsResult,
+    LDAPNoSuchObjectResult,
     LDAPObjectClassError,
     LDAPPasswordIsMandatoryError,
     LDAPSocketOpenError,
@@ -17,27 +18,31 @@ from .exceptions import LdapConnectionError, LdapUnexpectedError
 """ ######################################################### """
 
 
-def ldap_logging(conn_method):
+def ldap_logging(ldap_method):
 
     """
-    LDAP. Connection & Methods Logging Decorator
-    :param conn_method: LDAP Connection
+    Connection & Methods Logging Decorator
+    :param ldap_method: LDAP Method
     :return:
     """
 
     def wrapped(*args, **kwargs):
 
         """
-        LDAP. Connection & Methods Log Wrapper
+        Connection & Methods Log Wrapper
         :return:
         """
 
-        log_message = f"@ LDAP {repr(conn_method.__name__)} Method @ - {{message}}"
+        log_message = f"@ LDAP {repr(ldap_method.__name__)} Method @ - {{message}}"
         logging.debug(log_message.format(message=f"Query Params:\nArgs: {args}\nKwargs: {kwargs}."))
 
         try:
             # Return Union[tuple, dict, None]
-            return conn_method(*args, **kwargs)
+            return ldap_method(*args, **kwargs)
+        except LDAPNoSuchObjectResult as err:
+            # Object Reader by DN Not Found
+            logging.warning(log_message.format(message=f"Warning Detail: {repr(err)}."))
+            return None
         except (LDAPAttributeError, LDAPObjectClassError, ValidationError) as err:
             logging.error(log_message.format(message=f"Error Detail: {repr(err)}."))
             raise err

@@ -1,6 +1,16 @@
-import logging, re
-from ldap3 import ALL, AUTO_BIND_DEFAULT, ROUND_ROBIN, SUBTREE, Connection, Server, ServerPool
-from ldap3.core.exceptions import LDAPAttributeError, LDAPObjectClassError
+import logging
+from ldap3 import (
+    ALL,
+    AUTO_BIND_DEFAULT,
+    ROUND_ROBIN,
+    SUBTREE,
+    AttrDef,
+    Connection,
+    ObjectDef,
+    Reader,
+    Server,
+    ServerPool
+)
 from typing import Any, Union, Iterable
 from .decorators import ldap_logging
 from .exceptions import LdapBoundError
@@ -17,16 +27,6 @@ class tinyLDAP3Client:
     """
         tinyLDAP3 Client. Wrapper for Python 'ldap3' Package.
         """
-
-    __LDAP_PERSON_AUTH_RETURNED_ATTRS_TUPLE = (
-        "cn",
-        "employeeNumber",
-        "ipPhone",
-        "mail",
-        "mobile",
-        "userPrincipalName",
-        "sAMAccountName",
-    )
 
     def __init__(self, **kwargs):
         super(tinyLDAP3Client, self).__init__()
@@ -54,7 +54,6 @@ class tinyLDAP3Client:
 
         """
         Get entries via connection context manager.
-        :param search_query:                Search Query Expression
         :param returned_attrs_collection:   Collection of Returned Attributes
         :return:
         """
@@ -83,6 +82,35 @@ class tinyLDAP3Client:
                     attributes=returned_attrs_collection
                 )
                 return conn.entries
+            logging.error(log_message.format(message=f"Error Detail:\n{conn}."))
+            raise LdapBoundError("Bound error occurred.")
+
+    def __ldap_reader(self, object_category: Iterable[str], dn: str) -> Reader:
+
+        """
+        Get reader via connection context manager.
+        :param object_category:             Object Categories & Classes Collection
+        :param dn:                          Object `distinguishedName` Attribute Value
+        :return:
+        """
+
+        log_message = "@ LDAP Reader @ - {message}"
+
+        with Connection(
+            self.__server_pool,
+            raise_exceptions=True,
+            auto_bind=AUTO_BIND_DEFAULT,
+            user=self.__user_dn,
+            password=self.__user_pass,
+            return_empty_attributes=True,
+            receive_timeout=self._receive_timeout
+        ) as conn:
+            # 'conn.bound' - The status of the LDAP session (True / False)
+            if conn.bound:
+                object_def = ObjectDef(object_category, conn)
+                if any(value in object_category for value in ["computer", "group", "person", "user"]):
+                    object_def += AttrDef("sAMAccountName")
+                return Reader(connection=conn, object_def=object_def, base=dn)
             logging.error(log_message.format(message=f"Error Detail:\n{conn}."))
             raise LdapBoundError("Bound error occurred.")
 
@@ -166,7 +194,7 @@ class tinyLDAP3Client:
 
         """
         Computers search query.
-        :param attr_value:                  Attributes Value for Searching by 'cn'
+        :param attr_value:                  Attributes Value for Searching by `cn`
         :return:
         """
 
@@ -194,7 +222,7 @@ class tinyLDAP3Client:
 
         """
         Groups search query.
-        :param attr_value:                  Attributes Value for Searching by 'cn'
+        :param attr_value:                  Attributes Value for Searching by `cn`
         :return:
         """
 
@@ -258,7 +286,7 @@ class tinyLDAP3Client:
 
         """
         Attribute 'sAMAccountType' Values Description.
-        :param sat_value:                   'sAMAccountType' Value
+        :param sat_value:                   `sAMAccountType` Attribute Value
         :return:
         """
 
@@ -282,7 +310,7 @@ class tinyLDAP3Client:
 
         """
         Attribute 'userAccountControl' Values Description.
-        :param uac_value:               'userAccountControl' Value
+        :param uac_value:               `userAccountControl` Attribute Value
         :return:
         """
 
@@ -311,7 +339,7 @@ class tinyLDAP3Client:
             attr_value: str,
             is_active: bool = False,
             returned_attrs_collection: Iterable[str] = None
-    ) -> Union[dict[str, Any], tuple[dict], None]:
+    ) -> Union[dict[str, Any], tuple[dict, ...], None]:
 
         """
         Object (`Person`, `Group` or `Computer`) detail method will return an Object dictionary or a collection
@@ -366,6 +394,34 @@ class tinyLDAP3Client:
         return None
 
     @ldap_logging
+    def object_read(
+            self,
+            object_category: Iterable[str],
+            dn: str,
+            returned_attrs_collection: Iterable[str] = None
+    ) -> Union[dict[str, Any], tuple[dict, ...], None]:
+
+        """
+        Object (Any Category or Class) read method will return an Object dictionary or a collection
+        of Objects dictionaries
+        :param object_category:             Object Categories & Classes Collection
+        :param dn:                          Object `distinguishedName` Attribute Value
+        :param returned_attrs_collection:   Collection of Returned Attributes or None
+        :return:
+        """
+
+        log_message = f"@ LDAP Object Read @ - 'ObjectCategory: `{object_category}`, DN: `{dn}`' - {{message}}"
+
+        resp_raw = self.__ldap_reader(object_category, dn).search(attributes=returned_attrs_collection)
+        if resp_raw:
+            if len(resp_raw) == 1:
+                return {attr.key: attr.value for attr in resp_raw[0]}
+            else:
+                return tuple([{attr.key: attr.value for attr in item} for item in resp_raw])
+        logging.warning(log_message.format(message="LDAP Object not found."))
+        return None
+
+    @ldap_logging
     def objects_search(
             self,
             object_category: str,
@@ -373,7 +429,7 @@ class tinyLDAP3Client:
             order_by: str = "sAMAccountName",
             search_by_attrs_collection: Iterable[str] = None,
             returned_attrs_collection: Iterable[str] = None,
-    ) -> Union[tuple[dict], None]:
+    ) -> Union[tuple[dict, ...], None]:
 
         """
         Objects (`Person`, `Group` or `Computer`) search method will return a collection of Objects dictionaries.
@@ -429,7 +485,7 @@ class tinyLDAP3Client:
         """
         Person Auth will return a tuple of connection binding values and a dictionary of person attribute values
         or a dictionary of connection results (Authentication error case).
-        :param login:                       User Login as UPN (sAMAccountName@example.com)
+        :param login:                       User Login as UPN (`sAMAccountName@example.com`)
         :param password:                    User Password
         :param returned_attrs_collection:   Collection of Returned Attributes or None
         :return:

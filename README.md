@@ -20,6 +20,7 @@
             <ul>
                 <li><a href="#instance-create">Instance Create</a></li>
                 <li><a href="#object-detail">Object Detail</a></li>
+                <li><a href="#object-read">Object Read</a></li>
                 <li><a href="#objects-search">Objects Search</a></li>
                 <li><a href="#person-auth">Person Auth</a></li>
             </ul>
@@ -189,7 +190,7 @@ if __name__ == "__main__":
 </details>
 
 Optional arguments:
-* `is_active: bool = False` - Define the search scope: Active or All Users<
+* `is_active: bool = False` - Define the search scope: Active or All Users.
 * `returned_attrs_collection: Iterable[str] = None` - Override the collection of predefined returned attributes. 
 
 ##### Computer
@@ -249,6 +250,33 @@ print("Result", ldap.object_detail(
 #     {'mail': '...', 'employeeNumber': '...', 'sAMAccountName': '...', 'sn': 'value'}, 
 #     {'mail': '...', 'employeeNumber': '...', 'sAMAccountName': '...', 'sn': 'value'}
 # )
+```
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+
+#### Object Read
+
+Reading object attributes by category and `distinguishedName` attribute value.
+
+* `returned_attrs_collection: Iterable[str] = None` - Override the collection of returned attributes (Default: All attributes).
+
+```python
+ldap = ...
+print("Result:", ldap.object_read(
+    object_category=["top", "person", "user"],
+    dn="CN=Any-LDAP-Account,OU=_Users,DC=example,DC=com",
+    returned_attrs_collection=[
+        "objectClass", "description", "sAMAccountName", "name", "objectGUID"
+    ]
+))
+# Result: {
+#     'objectClass': ['top', 'person', 'organizationalPerson', 'user'], 
+#     'description': None, 
+#     'name': '...', 
+#     'objectGUID': '{...-...-...-...-...}', 
+#     'sAMAccountName': '...'
+# }
 ```
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
@@ -333,9 +361,9 @@ Category searching:
 
 Optional method arguments:
 * `order_by: str = "sAMAccountName"` -  Sorting by a specific attribute. Default value `sAMAccountname`. 
-The attribute will be added automatically if it's missing from the collection of returned attributes
-* `search_by_attrs_collection: Iterable[str] = None` - Override the predefined list for Person (User) search
-* `returned_attrs_collection: Iterable[str] = None` - Override the predefined list of returned attributes
+The attribute will be added automatically if it's missing from the collection of returned attributes.
+* `search_by_attrs_collection: Iterable[str] = None` - Override the predefined list for Person (User) search.
+* `returned_attrs_collection: Iterable[str] = None` - Override the predefined list of returned attributes.
 
 ##### Computer
 
@@ -387,7 +415,7 @@ print("Result", ldap.objects_search(
 
 #### Person Auth
 
-`login` - Expected value of the `userPrincipalName` attribute 
+`login` - Expected value of the `userPrincipalName` attribute.
 
 Predefined list of returned attributes:
 * `"cn"`,
@@ -399,7 +427,7 @@ Predefined list of returned attributes:
 * `"sAMAccountName"`,
 
 Optional method arguments:</br>
-`returned_attrs_collection: Iterable[str] = None` - Override the predefined list of returned attributes 
+`returned_attrs_collection: Iterable[str] = None` - Override the predefined list of returned attributes.
 
 ```python
 ldap = ...

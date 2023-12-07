@@ -1,5 +1,4 @@
 # Project ignore
-pyproject.toml
 test*.py
 *.txt
 !requirements.txt

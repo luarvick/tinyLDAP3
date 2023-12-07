@@ -65,7 +65,7 @@ LDAP_PERSON_AUTH_RETURNED_ATTRS_TUPLE = (
     "userPrincipalName",
     "sAMAccountName",
 )
-# "ldap_attributes = '*'" doesn't contain: "accountExpires" & "msDS-UserPasswordExpiryTimeComputed" attrs
+# returned_attrs_collection = ["*"] doesn't contain: "msDS-UserPasswordExpiryTimeComputed" attr
 LDAP_PERSON_DETAIL_RETURNED_ATTRS_TUPLE = (
     "accountExpires",
     "badPasswordTime",
