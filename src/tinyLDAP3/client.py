@@ -1,4 +1,4 @@
-import logging
+import datetime, logging
 from ldap3 import (
     ALL,
     AUTO_BIND_DEFAULT,
@@ -25,7 +25,7 @@ from .models import LdapObjectDetailModel, LdapObjecsSearchModel, LdapPersonAuth
 class tinyLDAP3Client:
 
     """
-        tinyLDAP3 Client. Wrapper for Python 'ldap3' Package.
+        tinyLDAP3 Client. Wrapper for Python `ldap3` Package.
         """
 
     def __init__(self, **kwargs):
@@ -282,10 +282,31 @@ class tinyLDAP3Client:
         )"""
 
     @staticmethod
+    def pwd_expiration(attr_value: int) -> datetime:
+
+        """
+        Normalization of the `msDS-UserPasswordExpiryTimeComputed` attribute.
+        :param attr_value:                  `msDS-UserPasswordExpiryTimeComputed` Attribute Value
+        :return:
+        """
+
+        # January 1, 1970 as MS file time
+        jan_1970 = 116444736000000000
+        us = (attr_value - jan_1970) // 10
+
+        # us = 910692730085477580   - Password Doesn't Expiry Account -> OverflowError
+        # us = 1622438419382306     - Normal Account
+        try:
+            expiration_date = datetime.datetime(1970, 1, 1) + datetime.timedelta(microseconds=us)
+        except OverflowError:
+            expiration_date = datetime.datetime.strptime("9999-12-31", "%Y-%m-%d")
+        return expiration_date
+
+    @staticmethod
     def sat_description(sat_value: int) -> str:
 
         """
-        Attribute 'sAMAccountType' Values Description.
+        Description of the `sAMAccountType` attribute.
         :param sat_value:                   `sAMAccountType` Attribute Value
         :return:
         """
@@ -309,7 +330,7 @@ class tinyLDAP3Client:
     def uac_description(uac_value: int) -> str:
 
         """
-        Attribute 'userAccountControl' Values Description.
+        Description of the `userAccountControl` attribute.
         :param uac_value:               `userAccountControl` Attribute Value
         :return:
         """
@@ -342,8 +363,8 @@ class tinyLDAP3Client:
     ) -> Union[dict[str, Any], tuple[dict, ...], None]:
 
         """
-        Object (`Person`, `Group` or `Computer`) detail method will return an Object dictionary or a collection
-        of Objects dictionaries.
+        Object (`Person`, `Group` or `Computer`) detail method will return an Object dictionary or a collection of
+        Objects dictionaries.
         :param object_category:             Object Category: `Person`, `Group` or `Computer`
         :param attr_name:                   Attribute Name for Searching
         :param attr_value:                  Attributes Value for Searching
@@ -402,8 +423,8 @@ class tinyLDAP3Client:
     ) -> Union[dict[str, Any], tuple[dict, ...], None]:
 
         """
-        Object (Any Category or Class) read method will return an Object dictionary or a collection
-        of Objects dictionaries
+        Object (Any Category or Class) read method will return an Object dictionary or a collection of
+        Objects dictionaries.
         :param object_category:             Object Categories & Classes Collection
         :param dn:                          Object `distinguishedName` Attribute Value
         :param returned_attrs_collection:   Collection of Returned Attributes or None
