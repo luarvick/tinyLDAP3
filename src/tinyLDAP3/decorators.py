@@ -1,4 +1,3 @@
-import logging
 from ldap3.core.exceptions import (
     LDAPAttributeError,
     LDAPInvalidCredentialsResult,
@@ -10,7 +9,9 @@ from ldap3.core.exceptions import (
     LDAPSocketSendError,
 )
 from pydantic import ValidationError
+
 from .exceptions import LdapConnectionError, LdapUnexpectedError
+from .logger import logger
 
 
 """ ######################################################### """
@@ -33,18 +34,18 @@ def ldap_logging(ldap_method):
         :return:
         """
 
-        log_message = f"@ LDAP {repr(ldap_method.__name__)} Method @ - {{message}}"
-        logging.debug(log_message.format(message=f"Query Params:\nArgs: {args}\nKwargs: {kwargs}."))
+        message = f"@ LDAP {repr(ldap_method.__name__)} Method @ - {{msg}}"
+        logger.debug(message.format(msg=f"Query Params:\nArgs: {args}\nKwargs: {kwargs}."))
 
         try:
             # Return Union[tuple, dict, None]
             return ldap_method(*args, **kwargs)
         except LDAPNoSuchObjectResult as err:
             # Object Reader by DN Not Found
-            logging.warning(log_message.format(message=f"Warning Detail: {repr(err)}."))
+            logger.warning(message.format(msg=f"Warning Detail: {repr(err)}."))
             return None
         except (LDAPAttributeError, LDAPObjectClassError, ValidationError) as err:
-            logging.error(log_message.format(message=f"Error Detail: {repr(err)}."))
+            logger.error(message.format(msg=f"Error Detail: {repr(err)}."))
             raise err
         except (
                 LDAPInvalidCredentialsResult,
@@ -53,9 +54,9 @@ def ldap_logging(ldap_method):
                 LDAPSocketReceiveError,
                 LDAPSocketSendError
         ) as err:
-            logging.error(log_message.format(message=f"Error Detail: {repr(err)}."))
+            logger.error(message.format(msg=f"Error Detail: {repr(err)}."))
             raise LdapConnectionError("Connection has been failed.")
         except Exception as err:
-            logging.error(log_message.format(message=f"Error Detail: {repr(err)}."))
+            logger.error(message.format(msg=f"Error Detail: {repr(err)}."))
             raise LdapUnexpectedError("Unexpected error occurred.")
     return wrapped

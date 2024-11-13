@@ -1,4 +1,4 @@
-import datetime, logging
+import datetime
 from ldap3 import (
     ALL,
     AUTO_BIND_DEFAULT,
@@ -12,8 +12,10 @@ from ldap3 import (
     ServerPool
 )
 from typing import Any, Union, Iterable
+
 from .decorators import ldap_logging
 from .exceptions import LdapBoundError
+from .logger import logger
 from .models import LdapObjectDetailModel, LdapObjecsSearchModel, LdapPersonAuthModel
 
 
@@ -58,7 +60,7 @@ class tinyLDAP3Client:
         :return:
         """
 
-        log_message = "@ LDAP Entries @ - {message}"
+        message = "@ LDAP Entries @ - {msg}"
 
         # 'conn' example: "{ldap_uri} - ssl - user: {ldap_user} - not lazy - \
         # bound - open - <local: {local_ip}:{local_port} - remote: {ldap_ip}:{ldap_port}> - \
@@ -82,7 +84,7 @@ class tinyLDAP3Client:
                     attributes=returned_attrs_collection
                 )
                 return conn.entries
-            logging.error(log_message.format(message=f"Error Detail:\n{conn}."))
+            logger.error(message.format(msg=f"Error Detail: {repr(conn)}."))
             raise LdapBoundError("Bound error occurred.")
 
     def __ldap_reader(self, object_category: Iterable[str], dn: str) -> Reader:
@@ -94,7 +96,7 @@ class tinyLDAP3Client:
         :return:
         """
 
-        log_message = "@ LDAP Reader @ - {message}"
+        message = "@ LDAP Reader @ - {msg}"
 
         with Connection(
             self.__server_pool,
@@ -111,7 +113,7 @@ class tinyLDAP3Client:
                 if any(value in object_category for value in ["computer", "group", "person", "user"]):
                     object_def += AttrDef("sAMAccountName")
                 return Reader(connection=conn, object_def=object_def, base=dn)
-            logging.error(log_message.format(message=f"Error Detail:\n{conn}."))
+            logger.error(message.format(msg=f"Error Detail: {repr(conn)}."))
             raise LdapBoundError("Bound error occurred.")
 
     def __ldap_object_detail_query_selector(
@@ -373,8 +375,8 @@ class tinyLDAP3Client:
         :return:
         """
 
-        log_message = \
-            f"@ LDAP Object Detail @ - 'ObjectCategory: `{object_category}`, AttrName: `{attr_name}`, Value: `{attr_value}`' - {{message}}"
+        message = \
+            f"@ LDAP Object Detail @ - 'ObjectCategory: `{object_category}`, AttrName: `{attr_name}`, Value: `{attr_value}`' - {{msg}}"
 
         validated_data = LdapObjectDetailModel(
             **{
@@ -400,10 +402,8 @@ class tinyLDAP3Client:
             if len(resp_raw) == 1:
                 return {attr.key: attr.value for attr in resp_raw[0]}
             else:
-                logging.warning(
-                    log_message.format(
-                        message="More than one LDAP Object were found. Use attributes with unique values."
-                    )
+                logger.warning(
+                    message.format(msg="More than one LDAP Object were found. Use attributes with unique values.")
                 )
                 return tuple(
                     sorted(
@@ -411,7 +411,7 @@ class tinyLDAP3Client:
                         key=lambda item: item[validated_data["attr_name"]]
                     )
                 )
-        logging.warning(log_message.format(message="LDAP Object not found."))
+        logger.warning(message.format(msg="LDAP Object not found."))
         return None
 
     @ldap_logging
@@ -431,7 +431,7 @@ class tinyLDAP3Client:
         :return:
         """
 
-        log_message = f"@ LDAP Object Read @ - 'ObjectCategory: `{object_category}`, DN: `{dn}`' - {{message}}"
+        message = f"@ LDAP Object Read @ - 'ObjectCategory: `{object_category}`, DN: `{dn}`' - {{msg}}"
 
         resp_raw = self.__ldap_reader(object_category, dn).search(attributes=returned_attrs_collection)
         if resp_raw:
@@ -439,7 +439,7 @@ class tinyLDAP3Client:
                 return {attr.key: attr.value for attr in resp_raw[0]}
             else:
                 return tuple([{attr.key: attr.value for attr in item} for item in resp_raw])
-        logging.warning(log_message.format(message="LDAP Object not found."))
+        logger.warning(message.format(msg="LDAP Object not found."))
         return None
 
     @ldap_logging
@@ -462,8 +462,8 @@ class tinyLDAP3Client:
         :return:
         """
 
-        log_message = \
-            f"@ LDAP Objects Search @ - 'ObjectCategory: `{object_category}`, AttrValue: `{attr_value}`' - {{message}}"
+        message = \
+            f"@ LDAP Objects Search @ - 'ObjectCategory: `{object_category}`, AttrValue: `{attr_value}`' - {{msg}}"
 
         validated_data = LdapObjecsSearchModel(
             **{
@@ -492,7 +492,7 @@ class tinyLDAP3Client:
                     key=lambda item: item[validated_data["order_by"]]
                 )
             )
-        logging.warning(log_message.format(message="LDAP Object(s) not found."))
+        logger.warning(message.format(msg="LDAP Object(s) not found."))
         return None
 
     @ldap_logging
@@ -512,7 +512,7 @@ class tinyLDAP3Client:
         :return:
         """
 
-        log_message = f"@ LDAP Person Auth @ - 'Login: {login}' - {{message}}"
+        message = f"@ LDAP Person Auth @ - 'Login: {login}' - {{msg}}"
 
         validated_data = LdapPersonAuthModel(
             **{
@@ -542,5 +542,5 @@ class tinyLDAP3Client:
             conn.unbind()
             return True, resp_result
         # conn.bound = False, conn.result["result"] = 49
-        logging.warning(log_message.format(message="LDAP Person invalid credentials."))
+        logger.warning(message.format(msg="LDAP Person invalid credentials."))
         return False, conn.result
