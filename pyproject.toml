@@ -4,15 +4,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tinyLDAP3"
-version = "0.2.61"
+version = "0.2.62"
 authors = [
   { name="Luarvick", email="lu.luarvick@gmail.com" },
 ]
 description = "Tiny wrapper for Python ldap3 Package."
 readme = "README.md"
 dependencies = [
-    "ldap3==2.9.1",
-    "pydantic==2.6.3"
+    "ldap3==2.10.2rc4",
+    "pydantic==2.13.4"
 ]
 requires-python = ">=3.10"
 classifiers = [
